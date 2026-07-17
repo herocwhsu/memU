@@ -55,12 +55,22 @@ def _build_anthropic_client(cfg: EmbeddingConfig) -> Any:
     raise ValueError(msg)
 
 
+def _build_fastembed_client(cfg: EmbeddingConfig) -> Any:
+    from memu.embedding.fastembed_client import FastEmbedClient
+
+    return FastEmbedClient(
+        embed_model=cfg.embed_model,
+        batch_size=cfg.embed_batch_size,
+    )
+
+
 # Registry mapping ``client_backend`` identifiers to embedding client builders.
 EMBEDDING_CLIENT_BUILDERS: dict[str, Callable[[EmbeddingConfig], Any]] = {
     "sdk": _build_sdk_client,
     "httpx": _build_httpx_client,
     "lazyllm_backend": _build_lazyllm_client,
     "anthropic": _build_anthropic_client,
+    "fastembed": _build_fastembed_client,
 }
 
 

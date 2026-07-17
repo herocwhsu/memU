@@ -66,6 +66,15 @@ def _build_lazyllm_client(cfg: LLMConfig) -> Any:
     )
 
 
+def _build_claude_cli_client(cfg: LLMConfig) -> Any:
+    from memu.llm.claude_cli_client import ClaudeCLIClient
+
+    return ClaudeCLIClient(
+        chat_model=cfg.chat_model,
+        api_key=cfg.api_key,
+    )
+
+
 # Registry mapping ``client_backend`` identifiers to client builders. Register
 # new LLM implementations here.
 LLM_CLIENT_BUILDERS: dict[str, Callable[[LLMConfig], Any]] = {
@@ -73,6 +82,7 @@ LLM_CLIENT_BUILDERS: dict[str, Callable[[LLMConfig], Any]] = {
     "anthropic": _build_anthropic_client,
     "httpx": _build_httpx_client,
     "lazyllm_backend": _build_lazyllm_client,
+    "claude_cli": _build_claude_cli_client,
 }
 
 
