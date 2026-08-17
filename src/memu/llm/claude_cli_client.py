@@ -24,6 +24,13 @@ _NEUTRAL_SYSTEM_PROMPT = (
     "preamble, commentary, or markdown fences."
 )
 
+# settings.py defaults api_key to the literal string "OPENAI_API_KEY", used as
+# a sentinel for "not configured, resolve it from the environment" (see the
+# `if self.api_key == "OPENAI_API_KEY"` checks there). Treat it as unset --
+# otherwise it is truthy, wins over CLAUDE_CODE_OAUTH_TOKEN, and gets sent
+# verbatim as the bearer token, which the API rejects with a 401.
+_UNSET_API_KEY_SENTINEL = "OPENAI_API_KEY"
+
 
 class ClaudeCLIClient:
     """Claude LLM client backed by the Claude Code CLI (``claude --print``).
@@ -48,7 +55,7 @@ class ClaudeCLIClient:
         timeout_seconds: int = _DEFAULT_TIMEOUT_SECONDS,
     ):
         self.chat_model = chat_model
-        self._token = api_key or ""
+        self._token = "" if api_key == _UNSET_API_KEY_SENTINEL else (api_key or "")
         self.timeout_seconds = timeout_seconds
         self._cli = os.environ.get("CLAUDE_CLI_PATH") or shutil.which("claude")
         if not self._cli:
@@ -100,7 +107,11 @@ class ClaudeCLIClient:
             "stderr": stderr.decode(errors="replace")[-2000:],
         }
         if proc.returncode != 0:
-            msg = f"claude CLI failed (exit {proc.returncode}): {raw['stderr'][:500]}"
+            # The CLI reports some failures (notably "Failed to authenticate.
+            # API Error: 401") on stdout, not stderr, so reporting stderr alone
+            # yields an empty reason and makes the cause impossible to guess.
+            detail = raw["stderr"].strip() or stdout.decode(errors="replace").strip()
+            msg = f"claude CLI failed (exit {proc.returncode}): {detail[:500]}"
             raise RuntimeError(msg)
         text = stdout.decode(errors="replace").strip()
         logger.debug("claude CLI response: %s", text[:500])
